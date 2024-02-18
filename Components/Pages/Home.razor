@@ -1,0 +1,175 @@
+﻿@page "/"
+@inject HttpClient Http
+@inject IConfiguration Configuration
+
+@using System.Diagnostics
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Net.Http.Headers
+@using Microsoft.Extensions.Configuration
+
+@using Models
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+@if (allAdmission == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <section class="text-gray-600 body-font">
+        <div class="container px-5 py-4 mx-auto">
+            <div class="text-center mb-20">
+                <h1 class="sm:text-3xl text-2xl font-medium title-font text-gray-900 mb-4">Strapi Blazor Blog App</h1>
+                <p class="text-base leading-relaxed xl:w-2/4 lg:w-3/4 mx-auto text-gray-500s">British History - From the Anglo-Saxon era to present day Britain.</p>
+                <div class="flex mt-6 justify-center">
+                    <div class="w-16 h-1 rounded-full bg-indigo-500 inline-flex"></div>
+                </div>
+            </div>
+            <div class="flex flex-wrap -m-3">
+                @foreach (var admission in allAdmission.Data)
+                {
+                    <div class="xl:w-1/4 md:w-1/2 p-4">
+                        <div class="bg-gray-100 p-6 rounded-lg">
+                            <img class="h-40 rounded w-full object-cover object-center mb-6" src="@admission.Attributes.CardImage"
+                                 alt="content">
+                            <h2 class="text-lg text-gray-900 font-medium title-font mb-4">@admission.Attributes.TourTitle</h2>
+                            <NavLink href="@($"post/{admission.Id.ToString()}")">
+                                <a class="text-indigo-500 inline-flex items-center">
+                                    Read More
+                                    <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                         stroke-width="2" class="w-4 h-4 ml-2" viewBox="0 0 24 24">
+                                        <path d="M5 12h14M12 5l7 7-7 7"></path>
+                                    </svg>
+                                </a>
+                            </NavLink>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+
+    private AdmissionList? allAdmission = null;
+    public string? strapi_api_url;
+
+
+    // protected override void OnInitialized()
+    // {
+    //     RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+    //     // Notifier.Notify += OnNotify;
+    // }
+
+    protected override async Task OnInitializedAsync()
+    {
+        strapi_api_url = Configuration["AppSettings:STRAPI_API_URL"];
+        var url = "{STRAPI_API_URL}/api/admissions?populate=*";
+
+        try
+        {
+            string API_KEY = "609f461f7fff38c350c1fbf516d71003be75a190c6394eff90df5a165194075a8f21259bbcb09d765eb58255680a72629fc4cd206963c994149a845fcfa08cf565a46ff5e15eaf231366b7e4fcae07b5916087b9727be4759679717e0a9913ae46a4d12cfd6eb3d65fbf874bff7fe6e5e8eb5c5771f91985b0df415e85e58da2";
+
+            var request = new HttpRequestMessage(HttpMethod.Get, url.Replace("{STRAPI_API_URL}", strapi_api_url));
+            request.Headers.Add("Authorization", "Bearer {API_KEY}".Replace("{API_KEY}", API_KEY));
+            // request.Headers.Add("Accept", "application/vnd.github.v3+json");
+            // request.Headers.Add("User-Agent", "HttpClientFactory-Sample");
+
+            // // var client = ClientFactory.CreateClient();
+
+            // Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", API_KEY);
+            var response = await Http.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                // var jsonObject = JsonConvert.DeserializeObject(jsonString);
+
+                // using var responseStream = await response.Content.ReadAsStreamAsync();
+                // allAdmission = await JsonSerializer.DeserializeAsync<AdmissionList>(jsonString);
+                allAdmission = JsonSerializer.Deserialize<AdmissionList>(jsonString);
+            }
+
+            //------------------
+
+
+            // Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "609f461f7fff38c350c1fbf516d71003be75a190c6394eff90df5a165194075a8f21259bbcb09d765eb58255680a72629fc4cd206963c994149a845fcfa08cf565a46ff5e15eaf231366b7e4fcae07b5916087b9727be4759679717e0a9913ae46a4d12cfd6eb3d65fbf874bff7fe6e5e8eb5c5771f91985b0df415e85e58da2");
+
+            // allAdmission = await Http.GetFromJsonAsync<AdmissionList>(url.Replace("{STRAPI_API_URL}", strapi_api_url));
+
+            // if (allAdmission?.data != null)
+            // {
+            //     foreach (var admission in allAdmission.data)
+            //     {
+            //         //admission.TourName = strapi_api_url + admission.TourName;
+            //     }
+            // }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+
+    // [Parameter]
+    // public string? Param { get; set; }
+
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        // if (parameters.TryGetValue<string>(nameof(Param), out var value))
+        // {
+        //     if (value is null)
+        //     {
+        //         message = "The value of 'Param' is null.";
+        //     }
+        //     else
+        //     {
+        //         message = $"The value of 'Param' is {value}.";
+        //     }
+        // }
+
+        await base.SetParametersAsync(parameters);
+    }
+
+    // public void Dispose() => Notifier.Notify -= OnNotify;
+
+    public class Data<T>
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+        
+        [JsonPropertyName("attributes")]
+        public T? Attributes { get; set; }
+    }
+
+    public class Admission
+    {
+        public string? TourName { get; set; }
+        public string? TourTitle { get; set; }
+        public string? Tags { get; set; }
+        public string? CardImage { get; set; }
+    }
+
+    public class AdmissionList
+    {
+        [JsonPropertyName("data")]
+        public List<Data<Admission>>? Data { get; set; }
+    }
+}
